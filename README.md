@@ -207,7 +207,7 @@ Together: transient errors retry automatically, permanent errors are captured fo
 
 Live SaaS offering 5 plans (Lite → Agency) with per-company pricing, done-for-you onboarding, and guaranteed spend cap:
 
-**→ [numenai.vercel.app](https://numenai.vercel.app)** *(update with actual Vercel URL)*
+**→ https://numen-ai.cl/
 
 ---
 
