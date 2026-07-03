@@ -1,14 +1,14 @@
 # Resilience Patterns
 
-Numen AI implements three complementary patterns that together guarantee no message is permanently lost. This document describes each pattern with exact parameters and explains how they interact.
+Numen AI implements four complementary patterns: three guarantee no message is permanently lost, and a fourth guarantees a human-paused conversation never stays silenced indefinitely. This document describes each pattern with exact parameters and explains how they interact.
 
 ---
 
 ## The Guarantee
 
-> A message that enters the platform either gets a response delivered to the user, or ends up in the Dead Letter Queue where it can be manually inspected and replayed. There is no silent discard.
+> A message that enters the platform either gets a response delivered to the user, or ends up in the Dead Letter Queue where it can be manually inspected and replayed. There is no silent discard. A conversation that a human takes over is never left unattended for more than a bounded window.
 
-This is enforced by the combination of: retry with backoff for transient failures, circuit breaker to stop amplifying load on a broken downstream, and DLQ as the terminal catch for anything that exhausts retries or hits a permanent error.
+This is enforced by the combination of: retry with backoff for transient failures, circuit breaker to stop amplifying load on a broken downstream, DLQ as the terminal catch for anything that exhausts retries or hits a permanent error, and auto-resume as the self-healing backstop for forgotten human handoffs.
 
 ---
 
@@ -166,7 +166,41 @@ Every DLQ entry in `failed_messages` contains:
 
 ---
 
-## How the Three Patterns Work Together
+## Pattern 4: Auto-Resume (Self-Healing for Human-in-the-Loop)
+
+### What it handles
+
+A different kind of "failure": a human operator pauses the agent to handle a conversation personally, then forgets to hand it back. Unlike the other three patterns, nothing here is broken — the agent is behaving exactly as told — but an unattended lead is functionally the same outcome as a lost message if nobody resumes the bot.
+
+### How it works
+
+```
+Every 30 minutes:
+    read all sessions where humanPaused = true
+    for each: if (now - pausedAt) >= 4 hours:
+        → resume the agent (humanPaused = false)
+        → notify the dashboard in real time
+```
+
+Same philosophy as the circuit breaker's HALF-OPEN auto-recovery: the system doesn't wait indefinitely for a human decision it can safely make itself after a bounded timeout.
+
+### Parameters
+
+| Parameter | Value |
+|---|---|
+| Scan interval | Every 30 minutes |
+| Resume threshold | 4 hours since paused |
+| Scope | Per-conversation, not per-tenant — one paused lead never blocks others |
+
+### Why 4 hours?
+
+Long enough that a genuine mid-conversation handoff (operator stepping away for lunch, a longer negotiation) isn't interrupted. Short enough that a forgotten pause doesn't silence the agent for an entire lead overnight. The threshold is a single constant in the scheduler — trivial to tune per the operator's actual response patterns once there's production data to look at.
+
+---
+
+## How the Three Message-Delivery Patterns Work Together
+
+(Auto-resume operates on a separate axis — a human-paused conversation, not a failed message — so it isn't part of the delivery flow below; see Pattern 4 above.)
 
 ```
 Incoming message

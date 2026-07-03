@@ -142,6 +142,21 @@ At 10 tenants on the Esencial plan: MRR ~$1,600 USD, AI cost ~$120 USD, gross ma
 
 ---
 
+## Layer 6: Human-in-the-Loop Cost Profile
+
+Pausing the agent for a conversation was evaluated for cost impact before shipping — a supervision feature that quietly increased execution volume would defeat its own purpose.
+
+| Action | Execution cost | Trigger |
+|---|---|---|
+| Pause / resume toggle | 1 execution + 1 sub-execution (session write) | Operator click — human-paced, not per-message |
+| Manual reply sent | 1 execution + 1 sub-execution | Operator click |
+| Message received while paused | 1 execution + 1 sub-execution (session write) — **no engine, no dispatcher** | Per inbound message |
+| Auto-resume scan | 1 execution every 30 min, regardless of whether anything is overdue | Schedule |
+
+A paused conversation is **cheaper per message** than a normal one: 2 sub-executions instead of the 6–7 a GPT-4.1 answer with RAG normally costs, because the agent engine and module dispatcher are never invoked. The only new fixed cost is the auto-resume scheduler — 48 executions/day, in the same order of magnitude as `module-cost-aggregator`. No polling was added anywhere: the dashboard's live view rides on Supabase Realtime (push, not pull), and there is no workflow that periodically checks "is there anything to show."
+
+---
+
 ## The Full Cost Control Stack at a Glance
 
 ```

@@ -87,6 +87,8 @@
 | **Latency** | ~12 s E2E with RAG + GPT-4.1. RAG: 4.3 s cold / 1.7 s cached. |
 | **Executions/msg** | 6–7 (direct) / 9–10 (with module) — down from 13 after Sprint C optimization |
 | **Audio** | WhatsApp voice messages → Whisper API → text → agent, transparent to the user |
+| **Live supervision** | Client-facing dashboard streams every stage of the agent's work (received → thinking → tool call → answered) via Supabase Realtime, without exposing model chain-of-thought |
+| **Human-in-the-loop** | Pause the agent on a single conversation from the dashboard — zero AI cost while paused, reply manually (WhatsApp), auto-resume after 4h if the operator forgets |
 
 ---
 
@@ -130,7 +132,19 @@ Together: transient errors retry automatically, permanent errors are captured fo
 
 ---
 
-## Workflow Inventory (57 total, 40 active in production)
+## Human-in-the-Loop: Supervision Without Losing Control
+
+An AI agent handling real leads needs an escape hatch. Three pieces work together, all authenticated with the operator's own Supabase JWT — never the platform's internal shared secret:
+
+- **Live dashboard** — every message's lifecycle (received, thinking, tool call, answered) streams to the operator's browser in real time via Supabase Realtime. No chain-of-thought is ever exposed, only operational stage.
+- **Pause gate, checked before the LLM call, not after** — `core-router` checks a `humanPaused` flag right after loading the session, *before* building the prompt or invoking GPT-4.1. A paused conversation costs **zero AI tokens**: the message is saved to session memory (so context isn't lost) and the operator's channel adapter receives a static acknowledgment instead of a model response — same response contract as a normal answer, so the WhatsApp/Telegram/Web Chat adapters needed **no changes** to support pausing.
+- **Auto-resume** — a scheduled workflow reactivates any conversation paused for more than 4 hours, so an operator forgetting to unpause never permanently silences the bot for a lead.
+
+Manual reply (operator types the answer, agent stays silent) currently ships for WhatsApp — same JWT-authenticated pattern, reusing the channel's existing send credential.
+
+---
+
+## Workflow Inventory (60 total, 40+ active in production)
 
 | Category | Workflow | Role |
 |---|---|---|
@@ -171,6 +185,9 @@ Together: transient errors retry automatically, permanent errors are captured fo
 | | `tenant-module-manager` | Per-tenant module entitlements: activate/deactivate |
 | | `ops-set-tenant-plan` | Hot plan change: free/starter/pro/enterprise without restart |
 | | `kb-builder` | AI-assisted KB ingestion via web form (GPT-4.1 structures raw text) |
+| **Human-in-the-loop** | `ops-toggle-human-pause` | Browser-facing webhook (Supabase JWT auth): pause/resume the agent for one conversation |
+| | `ops-send-manual-reply` | Browser-facing webhook: operator sends a manual reply (WhatsApp) while paused |
+| | `ops-auto-resume-scheduler` | Every 30 min: reactivates conversations paused for over 4h |
 | **Backup** | `backup-exporter` | Nightly 03:30: 14 critical DataTables → Google Sheets snapshot |
 | | `backup-exporter-table` | Sub-workflow: one table per execution to isolate memory |
 
@@ -184,9 +201,10 @@ Together: transient errors retry automatically, permanent errors are captured fo
 | **AI / LLM** | OpenAI GPT-4.1 (agent core), text-embedding-3-small (RAG), Whisper (audio) |
 | **Messaging** | WhatsApp Business Cloud API, Telegram Bot API |
 | **Data** | n8n DataTables (22 tables), Google Sheets (KB + billing + backup) |
+| **Live supervision** | Supabase (Postgres + Realtime), row-level security scoped by tenant JWT |
 | **Calendar** | Google Calendar API (real booking and cancellation) |
-| **Web** | Next.js 14 on Vercel (commercial site + lead capture) |
-| **Security** | X-Platform-Key (internal auth), X-Hub-Signature-256 (Meta webhooks), rate limiting |
+| **Web** | Next.js 16 on Vercel (commercial site + client dashboard + lead capture) |
+| **Security** | X-Platform-Key (internal auth), X-Hub-Signature-256 (Meta webhooks), Supabase JWT (browser-facing actions), rate limiting |
 
 ---
 
@@ -198,8 +216,8 @@ Together: transient errors retry automatically, permanent errors are captured fo
 | Telegram | **LIVE** | Text. Admin alerts also routed here. |
 | Web Chat | **LIVE** | Embedded via n8n hosted chat. |
 | Gmail / Email | **Built — Paused** | Adapter built and tested E2E. Paused: needs dedicated mailbox to avoid answering personal email. |
-| Facebook Messenger | **Ready** | Adapter built with security hardening. Pending Meta Page setup. |
-| Instagram DM | **Ready** | Adapter built with security hardening. Pending Meta IG Business account. |
+| Facebook Messenger | **Connected** | Page linked, webhook verified, security hardening active. Pending Meta App Review (business verification) for public rollout. |
+| Instagram DM | **Connected** | Business account linked, webhook verified, security hardening active. Pending Meta App Review. |
 
 ---
 
@@ -213,9 +231,9 @@ Live SaaS offering 5 plans (Lite → Agency) with per-company pricing, done-for-
 
 ## See Also
 
-- [Architecture Decisions](docs/architecture.md) — why Gateway pattern, UMM, tenantId isolation, fire-and-forget telemetry
-- [Resilience Patterns](docs/resilience-patterns.md) — DLQ, Circuit Breaker, Exponential Backoff with exact parameters
-- [FinOps Strategy](docs/finops.md) — full cost control: spend cap, metering, idle reduction, margin model
+- [Architecture Decisions](docs/architecture.md) — why Gateway pattern, UMM, tenantId isolation, fire-and-forget telemetry, JWT-scoped human intervention
+- [Resilience Patterns](docs/resilience-patterns.md) — DLQ, Circuit Breaker, Exponential Backoff, auto-resume — with exact parameters
+- [FinOps Strategy](docs/finops.md) — full cost control: spend cap, metering, idle reduction, margin model, human-in-the-loop cost profile
 
 ---
 
