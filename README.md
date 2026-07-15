@@ -79,10 +79,11 @@
 
 | Capability | Detail |
 |---|---|
-| **AI Agent** | GPT-4.1 with tool calling, RAG over business KB, ~50-message session memory per user per channel |
+| **AI Agent** | GPT-4.1 with tool calling, RAG over business KB, ~50-message session memory per user per channel. Model selectable per tenant (GPT-4.1 / GPT-4.1-mini) via config — zero redeploy. |
 | **Multi-tenant** | Full tenant isolation by `tenantId` across 22+ DataTables. Onboarding in a single API call. |
 | **Omnichannel** | WhatsApp (text + audio with Whisper transcription), Telegram, Web Chat — live. Email, Messenger, IG — ready. |
-| **RAG** | Google Sheets KB per tenant, in-memory vector store, `text-embedding-3-small`, topK=6, 10-min cache |
+| **RAG** | Pluggable backend per tenant: Google Sheets KB + in-memory vector store (default), or Supabase pgvector with hybrid search (vector ⊕ Postgres FTS fused via RRF), LLM query rewriting and reranking |
+| **Self-service KB Center** | Clients edit their own knowledge base from the dashboard: draft/publish editorial flow on Supabase with RLS, PDF/DOCX import, and a website crawler (SSRF guards, robots.txt, quotas, checksums) that keeps the KB in sync with the client's site |
 | **Business modules** | Calendar booking (Google Calendar), lead capture (Google Sheets), reminders (Telegram daily 8AM) |
 | **Latency** | ~12 s E2E with RAG + GPT-4.1. RAG: 4.3 s cold / 1.7 s cached. |
 | **Executions/msg** | 6–7 (direct) / 9–10 (with module) — down from 13 after Sprint C optimization |
@@ -144,7 +145,15 @@ Manual reply (operator types the answer, agent stays silent) currently ships for
 
 ---
 
-## Workflow Inventory (60 total, 40+ active in production)
+## Advanced RAG in Production: the Huberman Tenant
+
+The multi-tenant RAG layer is exercised beyond the commercial use case by a dedicated tenant running a coaching bot over 400+ episodes of podcast content: dual-layer ingestion (episode summaries + 17,899 transcript chunks cut on the show's real chapter timestamps), hybrid retrieval (pgvector cosine ⊕ Postgres full-text fused with Reciprocal Rank Fusion), LLM query rewriting and reranking, YouTube deep-links to the exact minute of the source, and a quantitative eval harness (golden set, Recall@8 / MRR) — all sharing this platform's router, agent engine, and module dispatcher with zero changes for other tenants.
+
+**→ Dedicated repo with architecture, evals, and two production debugging case studies: [huberman-rag-bot](https://github.com/lindermannn/huberman-rag-bot)**
+
+---
+
+## Workflow Inventory (70 total, 50 active in production)
 
 | Category | Workflow | Role |
 |---|---|---|
@@ -184,7 +193,13 @@ Manual reply (operator types the answer, agent stays silent) currently ships for
 | | `tenant-manager` | Admin CRUD: create/list/get/update/set_status |
 | | `tenant-module-manager` | Per-tenant module entitlements: activate/deactivate |
 | | `ops-set-tenant-plan` | Hot plan change: free/starter/pro/enterprise without restart |
+| | `ops-pricing-api` | Public pricing endpoint — single source of truth consumed by the commercial website |
 | | `kb-builder` | AI-assisted KB ingestion via web form (GPT-4.1 structures raw text) |
+| **Knowledge Center** | `ops-kb-command-api` | Authenticated API: KB drafts, answer preview, PDF/DOCX import |
+| | `ops-kb-website-api` + `kb-website-crawler` | Website discovery and sync with SSRF guards, robots.txt, quotas, checksums |
+| | `kb-source-sync-scheduler` | Scheduled re-sync of crawled sources |
+| | `ops-kb-migrate-sheets-to-drafts` | One-shot migration: legacy Sheets KB → editorial drafts |
+| | `ops-sync-tenant-profile` | Tenant profile sync between dashboard and platform config |
 | **Human-in-the-loop** | `ops-toggle-human-pause` | Browser-facing webhook (Supabase JWT auth): pause/resume the agent for one conversation |
 | | `ops-send-manual-reply` | Browser-facing webhook: operator sends a manual reply (WhatsApp) while paused |
 | | `ops-auto-resume-scheduler` | Every 30 min: reactivates conversations paused for over 4h |
@@ -197,14 +212,14 @@ Manual reply (operator types the answer, agent stays silent) currently ships for
 
 | Layer | Technology |
 |---|---|
-| **Orchestration** | n8n Cloud (workflow automation, 57 workflows) |
-| **AI / LLM** | OpenAI GPT-4.1 (agent core), text-embedding-3-small (RAG), Whisper (audio) |
+| **Orchestration** | n8n Cloud (workflow automation, 70 workflows) |
+| **AI / LLM** | OpenAI GPT-4.1 / GPT-4.1-mini (per-tenant agent core), text-embedding-3-small (RAG), Whisper (audio) |
 | **Messaging** | WhatsApp Business Cloud API, Telegram Bot API |
-| **Data** | n8n DataTables (22 tables), Google Sheets (KB + billing + backup) |
+| **Data** | n8n DataTables (22 tables), Google Sheets (KB + billing + backup), Supabase pgvector (advanced RAG backend) |
 | **Live supervision** | Supabase (Postgres + Realtime), row-level security scoped by tenant JWT |
 | **Calendar** | Google Calendar API (real booking and cancellation) |
 | **Web** | Next.js 16 on Vercel (commercial site + client dashboard + lead capture) |
-| **Security** | X-Platform-Key (internal auth), X-Hub-Signature-256 (Meta webhooks), Supabase JWT (browser-facing actions), rate limiting |
+| **Security** | X-Platform-Key (internal auth, centralized in a DataTable — zero hardcoded secrets after the July 2026 hardening pass across 9 workflows), X-Hub-Signature-256 (Meta webhooks), Supabase JWT (browser-facing actions), rate limiting |
 
 ---
 
@@ -212,7 +227,7 @@ Manual reply (operator types the answer, agent stays silent) currently ships for
 
 | Channel | Status | Notes |
 |---|---|---|
-| WhatsApp Business | **LIVE** | Text + audio (Whisper). Real phone number. |
+| WhatsApp Business | **LIVE** (test-mode token) | Text + audio (Whisper). Real phone number. Migration from Meta's 24h test token to a permanent System User token in progress — incident of 2026-07-14 documented and runbooked. |
 | Telegram | **LIVE** | Text. Admin alerts also routed here. |
 | Web Chat | **LIVE** | Embedded via n8n hosted chat. |
 | Gmail / Email | **Built — Paused** | Adapter built and tested E2E. Paused: needs dedicated mailbox to avoid answering personal email. |
