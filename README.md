@@ -2,10 +2,10 @@
 
 ![Status](https://img.shields.io/badge/status-LIVE%20%E2%80%93%20Production-brightgreen)
 ![Platform](https://img.shields.io/badge/platform-n8n%20Cloud-orange)
-![AI](https://img.shields.io/badge/AI-GPT--4.1-blue)
+![AI](https://img.shields.io/badge/AI-GPT--5.6%20Luna-blue)
 ![Tenants](https://img.shields.io/badge/tenants-multi--tenant-purple)
 
-**A production AI SaaS platform serving real clients via WhatsApp, Telegram, and Web Chat — engineered with Gateway pattern, multi-tenant isolation, full FinOps control, and enterprise-grade resilience. Not a tutorial. Not a prototype.**
+**A production AI SaaS platform serving real clients via WhatsApp, Telegram, Instagram, Messenger and Web Chat — engineered with Gateway pattern, multi-tenant isolation, full FinOps control, and enterprise-grade resilience. Not a tutorial. Not a prototype.**
 
 ---
 
@@ -15,8 +15,8 @@
 ┌────────────────────────────────────────────────────────────────────┐
 │                        INBOUND CHANNELS                            │
 │                                                                    │
-│   WhatsApp Business    Telegram Bot    Web Chat    Gmail*          │
-│   (text + audio)       (text)          (embedded)  (paused)        │
+│   WhatsApp    Telegram   Web Chat   Instagram   Messenger   Gmail* │
+│   (text+audio) (text)    (embedded)  (Meta app in review) (paused) │
 └───────────┬────────────────┬───────────────┬──────────────────────┘
             │                │               │
             ▼                ▼               ▼
@@ -41,7 +41,7 @@
 │                    CORE AGENT ENGINE v6                            │
 │                                                                    │
 │  ┌──────────────────┐   ┌─────────────────┐   ┌────────────────┐  │
-│  │  Session Memory  │   │   GPT-4.1 Core  │   │    Tenant      │  │
+│  │  Session Memory  │   │   GPT-5.6 Core  │   │    Tenant      │  │
 │  │  ~50 msg window  │   │   Tool Calling  │   │  Config Loader │  │
 │  │  per user/channel│   │   + RAG context │   │  (modules,     │  │
 │  └──────────────────┘   └────────┬────────┘   │   prompt, KB)  │  │
@@ -79,13 +79,13 @@
 
 | Capability | Detail |
 |---|---|
-| **AI Agent** | GPT-4.1 with tool calling, RAG over business KB, ~50-message session memory per user per channel. Model selectable per tenant (GPT-4.1 / GPT-4.1-mini) via config — zero redeploy. |
+| **AI Agent** | GPT-5.6 Luna (Responses API, tool calling) with RAG over business KB and ~50-message session memory per user per channel. Model overridable per tenant via config — zero redeploy. |
 | **Multi-tenant** | Full tenant isolation by `tenantId` across 22+ DataTables. Onboarding in a single API call. |
-| **Omnichannel** | WhatsApp (text + audio with Whisper transcription), Telegram, Web Chat — live. Email, Messenger, IG — ready. |
+| **Omnichannel** | WhatsApp (text + audio with Whisper transcription), Telegram, Web Chat — live. Instagram DM and Messenger — webhooks verified, pending Meta app review. Gmail — ready. |
 | **RAG** | Pluggable backend per tenant: Google Sheets KB + in-memory vector store (default), or Supabase pgvector with hybrid search (vector ⊕ Postgres FTS fused via RRF), LLM query rewriting and reranking |
 | **Self-service KB Center** | Clients edit their own knowledge base from the dashboard: draft/publish editorial flow on Supabase with RLS, PDF/DOCX import, and a website crawler (SSRF guards, robots.txt, quotas, checksums) that keeps the KB in sync with the client's site |
 | **Business modules** | Calendar booking (Google Calendar), lead capture (Google Sheets), reminders (Telegram daily 8AM) |
-| **Latency** | ~12 s E2E with RAG + GPT-4.1. RAG: 4.3 s cold / 1.7 s cached. |
+| **Latency** | ~12 s E2E with RAG. RAG: 4.3 s cold / 1.7 s cached. *Measured on GPT-4.1; not re-measured since the GPT-5.6 migration.* |
 | **Executions/msg** | 6–7 (direct) / 9–10 (with module) — down from 13 after Sprint C optimization |
 | **Audio** | WhatsApp voice messages → Whisper API → text → agent, transparent to the user |
 | **Live supervision** | Client-facing dashboard streams every stage of the agent's work (received → thinking → tool call → answered) via Supabase Realtime, without exposing model chain-of-thought |
@@ -124,7 +124,7 @@ Together: transient errors retry automatically, permanent errors are captured fo
 | **Idle execution reduction** | −90% (9,330 → 936 executions/month) |
 | **Spend Cap enforcement** | HTTP 402 (non-retryable) — adapter never retries this |
 | **Usage alert** | Telegram notification at 80% of monthly budget (1×/day, no spam) |
-| **Cost per conversation** | ~$0.06 (GPT-4.1, 7 messages) / ~$0.012 (GPT-4o-mini) |
+| **Cost per conversation** | ~$0.06 (GPT-4.1, 7 messages) / ~$0.012 (GPT-4o-mini) — *pre-migration figures* |
 | **Gross margin** | >90% at ~200 conversations/month per tenant |
 | **Spend cap lag** | ≤6h (cost-aggregator runs every 6h) |
 | **Billing export** | Automated monthly: MRR, cost/tenant, margin, ROI → Google Sheets |
@@ -138,7 +138,7 @@ Together: transient errors retry automatically, permanent errors are captured fo
 An AI agent handling real leads needs an escape hatch. Three pieces work together, all authenticated with the operator's own Supabase JWT — never the platform's internal shared secret:
 
 - **Live dashboard** — every message's lifecycle (received, thinking, tool call, answered) streams to the operator's browser in real time via Supabase Realtime. No chain-of-thought is ever exposed, only operational stage.
-- **Pause gate, checked before the LLM call, not after** — `core-router` checks a `humanPaused` flag right after loading the session, *before* building the prompt or invoking GPT-4.1. A paused conversation costs **zero AI tokens**: the message is saved to session memory (so context isn't lost) and the operator's channel adapter receives a static acknowledgment instead of a model response — same response contract as a normal answer, so the WhatsApp/Telegram/Web Chat adapters needed **no changes** to support pausing.
+- **Pause gate, checked before the LLM call, not after** — `core-router` checks a `humanPaused` flag right after loading the session, *before* building the prompt or invoking the model. A paused conversation costs **zero AI tokens**: the message is saved to session memory (so context isn't lost) and the operator's channel adapter receives a static acknowledgment instead of a model response — same response contract as a normal answer, so the WhatsApp/Telegram/Web Chat adapters needed **no changes** to support pausing.
 - **Auto-resume** — a scheduled workflow reactivates any conversation paused for more than 4 hours, so an operator forgetting to unpause never permanently silences the bot for a lead.
 
 Manual reply (operator types the answer, agent stays silent) currently ships for WhatsApp — same JWT-authenticated pattern, reusing the channel's existing send credential.
@@ -158,7 +158,7 @@ The multi-tenant RAG layer is exercised beyond the commercial use case by a dedi
 | Category | Workflow | Role |
 |---|---|---|
 | **Core hot-path** | `core-router` | Single entry point: auth, rate limit, tenant gate, spend cap |
-| | `core-agent-engine-v6` | GPT-4.1 agent: tool calling, RAG context injection, session memory |
+| | `core-agent-engine-v6` | GPT-5.6 Luna agent: Responses API, tool calling, RAG context injection, session memory |
 | | `core-config-loader` | Loads tenant config, modules, KB location per request |
 | | `core-memory-manager` | Session lifecycle: get/create/update with DataTable upsert |
 | | `core-logger` | Structured logging to `execution_logs` |
@@ -213,8 +213,8 @@ The multi-tenant RAG layer is exercised beyond the commercial use case by a dedi
 | Layer | Technology |
 |---|---|
 | **Orchestration** | n8n Cloud (workflow automation, 70 workflows) |
-| **AI / LLM** | OpenAI GPT-4.1 / GPT-4.1-mini (per-tenant agent core), text-embedding-3-small (RAG), Whisper (audio) |
-| **Messaging** | WhatsApp Business Cloud API, Telegram Bot API |
+| **AI / LLM** | OpenAI GPT-5.6 Luna via Responses API (per-tenant agent core, overridable per tenant), text-embedding-3-small (RAG), Whisper (audio) |
+| **Messaging** | WhatsApp Business Cloud API, Telegram Bot API, Meta Graph API (Instagram DM, Messenger) |
 | **Data** | n8n DataTables (22 tables), Google Sheets (KB + billing + backup), Supabase pgvector (advanced RAG backend) |
 | **Live supervision** | Supabase (Postgres + Realtime), row-level security scoped by tenant JWT |
 | **Calendar** | Google Calendar API (real booking and cancellation) |
