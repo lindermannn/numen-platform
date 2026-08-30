@@ -16,7 +16,7 @@
 │                        INBOUND CHANNELS                            │
 │                                                                    │
 │   WhatsApp    Telegram   Web Chat   Instagram   Messenger   Gmail* │
-│   (text+audio) (text)    (embedded)  (Meta app in review) (paused) │
+│   (text+audio) (text)    (embedded)  (DM)        (DM)     (paused) │
 └───────────┬────────────────┬───────────────┬──────────────────────┘
             │                │               │
             ▼                ▼               ▼
@@ -81,7 +81,7 @@
 |---|---|
 | **AI Agent** | GPT-5.6 Luna (Responses API, tool calling) with RAG over business KB and ~50-message session memory per user per channel. Model overridable per tenant via config — zero redeploy. |
 | **Multi-tenant** | Full tenant isolation by `tenantId` across 22+ DataTables. Onboarding in a single API call. |
-| **Omnichannel** | WhatsApp (text + audio with Whisper transcription), Telegram, Web Chat — live. Instagram DM and Messenger — webhooks verified, pending Meta app review. Gmail — ready. |
+| **Omnichannel** | **Five channels live:** WhatsApp (text + audio with Whisper transcription), Telegram, Web Chat, Instagram DM, Messenger. Gmail — ready. Meta channels pending public app review. |
 | **RAG** | Pluggable backend per tenant: Google Sheets KB + in-memory vector store (default), or Supabase pgvector with hybrid search (vector ⊕ Postgres FTS fused via RRF), LLM query rewriting and reranking |
 | **Self-service KB Center** | Clients edit their own knowledge base from the dashboard: draft/publish editorial flow on Supabase with RLS, PDF/DOCX import, and a website crawler (SSRF guards, robots.txt, quotas, checksums) that keeps the KB in sync with the client's site |
 | **Business modules** | Calendar booking (Google Calendar), lead capture (Google Sheets), reminders (Telegram daily 8AM) |
