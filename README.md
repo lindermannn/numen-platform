@@ -149,7 +149,7 @@ Manual reply (operator types the answer, agent stays silent) currently ships for
 
 The multi-tenant RAG layer is exercised beyond the commercial use case by a dedicated tenant running a coaching bot over 400+ episodes of podcast content: dual-layer ingestion (episode summaries + 17,899 transcript chunks cut on the show's real chapter timestamps), hybrid retrieval (pgvector cosine ⊕ Postgres full-text fused with Reciprocal Rank Fusion), LLM query rewriting and reranking, YouTube deep-links to the exact minute of the source, and a quantitative eval harness (golden set, Recall@8 / MRR) — all sharing this platform's router, agent engine, and module dispatcher with zero changes for other tenants.
 
-**→ Dedicated repo with architecture, evals, and two production debugging case studies: [huberman-rag-bot](https://github.com/lindermannn/huberman-rag-bot)**
+**→ Dedicated repo with architecture, evals, and two production debugging case studies: [huberman-rag-eval](https://github.com/lindermannn/huberman-rag-eval)**
 
 ---
 
