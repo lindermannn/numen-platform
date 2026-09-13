@@ -194,7 +194,7 @@ The multi-tenant RAG layer is exercised beyond the commercial use case by a dedi
 | **Operations** | `tenant-provisioner` | Full tenant onboarding in 1 API call |
 | | `tenant-manager` | Admin CRUD: create/list/get/update/set_status |
 | | `tenant-module-manager` | Per-tenant module entitlements: activate/deactivate |
-| | `ops-set-tenant-plan` | Hot plan change: free/starter/pro/enterprise without restart |
+| | `ops-set-tenant-plan` | Hot plan change across the 3 tiers (inicio/impulso/escala) without restart — translates legacy tier names from earlier pricing eras for backward compatibility |
 | | `ops-pricing-api` | Public pricing endpoint — single source of truth consumed by the commercial website |
 | | `kb-builder` | AI-assisted KB ingestion via web form (GPT-4.1 structures raw text) |
 | **Knowledge Center** | `ops-kb-command-api` | Authenticated API: KB drafts, answer preview, PDF/DOCX import |
@@ -240,7 +240,7 @@ The multi-tenant RAG layer is exercised beyond the commercial use case by a dedi
 
 ## Commercial Platform
 
-Live SaaS offering 5 plans (Lite → Agency) with per-company pricing, done-for-you onboarding, and guaranteed spend cap:
+Live SaaS offering 3 plans (inicio, impulso, escala) with per-company pricing, done-for-you onboarding, and guaranteed spend cap:
 
 **→ https://numen-ai.cl/
 

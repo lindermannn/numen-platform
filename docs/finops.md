@@ -134,11 +134,13 @@ For each active tenant:
 |---|---|
 | Cost per conversation | ~$0.06 USD |
 | Monthly AI cost per tenant | ~$12 USD |
-| Plan revenue (Esencial plan) | $149,000 CLP (~$160 USD) |
+| Plan revenue (inicio plan, illustrative) | $149,000 CLP (~$160 USD) |
 | Gross margin | >90% |
 | ROI on AI spend | ~13× |
 
-At 10 tenants on the Esencial plan: MRR ~$1,600 USD, AI cost ~$120 USD, gross margin >92%.
+At 10 tenants on the inicio plan: MRR ~$1,600 USD, AI cost ~$120 USD, gross margin >92%.
+
+*Plan names updated to the current 3-tier vocabulary (inicio, impulso, escala); the price figure above is illustrative and hasn't been re-verified against current pricing.*
 
 ---
 
