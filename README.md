@@ -1,4 +1,4 @@
-# Numen AI — Multi-Tenant AI Agent Platform
+# Numen AI — Multi-Tenant Conversational AI SaaS Platform
 
 ![Status](https://img.shields.io/badge/status-LIVE%20%E2%80%93%20Production-brightgreen)
 ![Platform](https://img.shields.io/badge/platform-n8n%20Cloud-orange)
@@ -6,6 +6,8 @@
 ![Tenants](https://img.shields.io/badge/tenants-multi--tenant-purple)
 
 **A production AI SaaS platform serving real clients via WhatsApp, Telegram, Instagram, Messenger and Web Chat — engineered with Gateway pattern, multi-tenant isolation, full FinOps control, and enterprise-grade resilience. Not a tutorial. Not a prototype.**
+
+Two halves, one platform: an **agent backend** (n8n Cloud, GPT-5.6 Luna, hybrid RAG) that does the work, and a **Next.js/Supabase dashboard** where a tenant's team watches it happen in real time, takes over a conversation, and manages the data the agent draws on. This repo documents both — [`docs/architecture.md`](docs/architecture.md) for the backend, [`docs/dashboard-architecture.md`](docs/dashboard-architecture.md) for the dashboard.
 
 ---
 
@@ -247,6 +249,7 @@ Live SaaS offering 5 plans (Lite → Agency) with per-company pricing, done-for-
 ## See Also
 
 - [Architecture Decisions](docs/architecture.md) — why Gateway pattern, UMM, tenantId isolation, fire-and-forget telemetry, JWT-scoped human intervention
+- [Dashboard Architecture](docs/dashboard-architecture.md) — the Next.js/Supabase half: RLS-enforced tenant isolation from the client, live supervision as an event log, and why the design system stays isolated
 - [Resilience Patterns](docs/resilience-patterns.md) — DLQ, Circuit Breaker, Exponential Backoff, auto-resume — with exact parameters
 - [FinOps Strategy](docs/finops.md) — full cost control: spend cap, metering, idle reduction, margin model, human-in-the-loop cost profile
 
